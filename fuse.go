@@ -189,6 +189,19 @@ func Mount(dir string, options ...MountOption) (*Conn, error) {
 	return c, nil
 }
 
+// PseudoMount fakes a mount.  Is used when another process performs
+// the actual mount.
+func PseudoMount(dev *os.File, proto Protocol) (*Conn, error) {
+	ready := make(chan struct{}, 1)
+	c := &Conn{
+		Ready: ready,
+	}
+	c.dev = dev
+	c.proto = proto
+	close(ready) // PseudoMount is never delayed
+	return c, nil
+}
+
 type OldVersionError struct {
 	Kernel     Protocol
 	LibraryMin Protocol
@@ -538,6 +551,10 @@ func (c *Conn) Close() error {
 // caller must hold wio or rio
 func (c *Conn) fd() int {
 	return int(c.dev.Fd())
+}
+
+func (c *Conn) File() *os.File {
+	return c.dev
 }
 
 func (c *Conn) Protocol() Protocol {
